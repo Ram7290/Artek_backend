@@ -1,31 +1,36 @@
 import nodemailer from "nodemailer";
 
 /**
- * Enquiry notification — two modes, chosen by NODE_ENV.
+ * Enquiry notification.
  *
- *   development (default): NEVER sends email. The full message is printed to
- *                          the console and the enquiry is marked "skipped".
- *   production:            sends a real email over SMTP. Anything other than
- *                          NODE_ENV=production falls back to development, so a
- *                          misconfigured host can't start emailing by accident.
+ *   SMTP configured: sends a real email over SMTP.
+ *   SMTP not set:    prints the full message to the console and the enquiry
+ *                    is marked "skipped" — the lead is still saved in Postgres.
  *
  * Either way the lead is already saved in Postgres before this runs.
  */
-const isProduction = process.env.NODE_ENV === "production";
-
 const smtpConfigured = Boolean(
   process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS,
 );
 
-const transporter =
-  isProduction && smtpConfigured
-    ? nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT ?? 587),
-        secure: Number(process.env.SMTP_PORT ?? 587) === 465,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      })
-    : null;
+const transporter = smtpConfigured
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: Number(process.env.SMTP_PORT ?? 587) === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+  : null;
+
+/**
+ * Recipient list — development routes to the test address, production to the
+ * live ARTEK inbox. Set via MAIL_TO_DEV / MAIL_TO in the environment.
+ */
+const isProduction = process.env.NODE_ENV === "production";
+const recipients = (isProduction
+  ? process.env.MAIL_TO ?? "info@artekteam.com"
+  : process.env.MAIL_TO_DEV ?? "ram@taiqontech.com"
+).split(",").map((s) => s.trim());
 
 const escape = (s) =>
   String(s)
@@ -53,7 +58,8 @@ function bodyHtml(e) {
 }
 
 /**
- * Sends (production) or prints (development) the new-enquiry notification.
+ * Sends the new-enquiry notification over SMTP, or logs to console when
+ * SMTP is not configured. The enquiry is already saved either way.
  * @returns {Promise<"sent" | "failed" | "skipped">}
  */
 export async function sendEnquiryNotification(enquiry) {
@@ -71,12 +77,12 @@ export async function sendEnquiryNotification(enquiry) {
     enquiry.message || "(no message)",
   ].join("\n");
 
-  if (!isProduction) {
+  if (!transporter) {
     console.info(
       [
         "",
-        "╭─ [development] enquiry email NOT sent (console only) ─────────────",
-        `│ To:      ${process.env.MAIL_TO ?? "info@artekteam.com"}`,
+        "╭─ [log-only] enquiry email NOT sent (SMTP not configured) ─────────",
+        `│ To:      ${recipients.join(", ")}`,
         `│ Subject: ${subject}`,
         ...text.split("\n").map((line) => `│ ${line}`),
         "╰───────────────────────────────────────────────────────────────────",
@@ -86,15 +92,10 @@ export async function sendEnquiryNotification(enquiry) {
     return "skipped";
   }
 
-  if (!transporter) {
-    console.warn("[mail] NODE_ENV=production but SMTP_* is not configured — enquiry saved, no email sent");
-    return "failed";
-  }
-
   try {
     await transporter.sendMail({
       from: process.env.MAIL_FROM ?? "Artek Website <noreply@artekteam.com>",
-      to: (process.env.MAIL_TO ?? "info@artekteam.com").split(",").map((s) => s.trim()),
+      to: recipients,
       replyTo: `${enquiry.fullName} <${enquiry.email}>`,
       subject,
       text,
