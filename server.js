@@ -48,7 +48,7 @@ app.use((_req, res) => {
 // eslint-disable-next-line no-unused-vars -- Express identifies error handlers by arity
 app.use((err, _req, res, _next) => {
   console.error("[api] unhandled error:", err);
-  res.status(500).json({ ok: false, error: "Something went wrong. Please call +971 4 379 7128." });
+  res.status(500).json({ ok: false, error: "Something went wrong. Please call +971 50 5513139." });
 });
 
 const port = Number(process.env.PORT ?? 4000);

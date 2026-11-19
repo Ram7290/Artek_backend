@@ -23,7 +23,7 @@ export async function createEnquiry(req, res) {
     console.error("[enquiries] failed to save:", err);
     return res.status(500).json({
       ok: false,
-      error: "We could not save your enquiry. Please call +971 4 379 7128 or email info@artekteam.com.",
+      error: "We could not save your enquiry. Please call +971 50 5513139 or email info@artekteam.com.",
     });
   }
 }

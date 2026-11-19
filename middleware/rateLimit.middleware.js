@@ -15,5 +15,5 @@ export const enquiryLimiter = rateLimit({
   limit: 5,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  message: { ok: false, error: "Too many enquiries from this address. Please call +971 4 379 7128." },
+  message: { ok: false, error: "Too many enquiries from this address. Please call +971 50 5513139." },
 });
