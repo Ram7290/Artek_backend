@@ -32,6 +32,34 @@ export const enquiryStatusSchema = z.object({
   status: z.enum(ENQUIRY_STATUSES),
 });
 
+export const blogPostSchema = z.object({
+  title: z.string().trim().min(5, "Enter a title (at least 5 characters)").max(200),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3, "Enter a URL slug")
+    .max(120)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers and hyphens only"),
+  dek: z.string().trim().max(300).optional().default(""),
+  category: z.string().trim().min(1, "Choose a category").max(80),
+  authorId: z.string().trim().min(1).max(60),
+  content: z.string().max(60000).optional().default(""),
+  coverImage: z.string().max(300).nullable().optional(),
+  coverAlt: z.string().trim().max(200).nullable().optional(),
+  seoTitle: z.string().trim().max(120).nullable().optional(),
+  seoDescription: z.string().trim().max(300).nullable().optional(),
+  status: z.enum(["draft", "published"]).optional(),
+  featured: z.boolean().optional(),
+  publishedAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the date format YYYY-MM-DD")
+    .nullable()
+    .optional(),
+});
+
+export const blogPostUpdateSchema = blogPostSchema.partial();
+
 /** Flattens a ZodError into `{ field: ["msg", ...] }` for the client. */
 export const fieldErrors = (error) =>
   Object.fromEntries(

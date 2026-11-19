@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import db, { sequelize, modelNames } from "./db/models/index.js";
 import { enquiryRoutes } from "./routes/enquiry.routes.js";
 import { adminRoutes } from "./routes/admin.routes.js";
+import { UPLOAD_DIR } from "./services/upload.service.js";
 
 /**
  * ARTEK API.
@@ -24,8 +25,11 @@ const origins = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
 
 // credentials:true is required for the admin cookie to flow between origins.
 app.use(cors({ origin: origins, credentials: true, methods: ["GET", "POST", "PATCH"], maxAge: 86400 }));
-app.use(express.json({ limit: "32kb" }));
+// Image uploads carry their own, larger body limit (see routes/admin.routes.js).
+const smallJson = express.json({ limit: "32kb" });
+app.use((req, res, next) => (req.path === "/api/admin/uploads" ? next() : smallJson(req, res, next)));
 app.use(cookieParser());
+app.use("/api/uploads", express.static(UPLOAD_DIR));
 
 /** Liveness + database check for uptime monitors and hosting health checks. */
 app.get("/api/health", async (_req, res) => {
